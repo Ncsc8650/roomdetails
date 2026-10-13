@@ -266,8 +266,6 @@ export default function App() {
                   "agencies",
                   "buildings",
                   "floors",
-                  "divisions",
-                  "rooms",
                   "division_room_links",
                   "organizational_departments",
                   "areas",
@@ -749,8 +747,7 @@ export function LocationExplorer({
   const [agency, setAgency] = useState(""),
     [building, setBuilding] = useState(""),
     [floor, setFloor] = useState(""),
-    [division, setDivision] = useState(""),
-    [room, setRoom] = useState(""),
+    [location, setLocation] = useState(""),
     [area, setArea] = useState("");
   const agencies = data.agencies.filter((r) => includeSample || !r.is_sample);
   const a = agency || agencies[0]?.id || "",
@@ -765,16 +762,19 @@ export function LocationExplorer({
     divisions = data.divisions.filter(
       (r) => r.agency_id === a && (includeSample || !r.is_sample),
     ),
-    d = division || divisions[0]?.id || "",
     rooms = data.rooms.filter(
-      (r) =>
-        r.floor_id === f &&
-        (includeSample || !r.is_sample) &&
-        data.division_room_links.some(
-          (l) => l.division_id === d && l.room_id === r.id,
-        ),
+      (r) => r.floor_id === f && (includeSample || !r.is_sample),
     ),
-    r = room || rooms[0]?.id || "",
+    locations = data.division_room_links.flatMap<RecordRow>((link) => {
+      const division = divisions.find((x) => x.id === link.division_id);
+      const room = rooms.find((x) => x.id === link.room_id);
+      return division && room
+        ? [{ ...link, name: `${displayName(division)} / ${displayName(room)}` }]
+        : [];
+    }),
+    selectedLocation = locations.find((x) => x.id === location) || locations[0],
+    d = String(selectedLocation?.division_id || ""),
+    r = String(selectedLocation?.room_id || ""),
     areas = data.areas.filter(
       (x) =>
         x.room_id === r &&
@@ -814,28 +814,22 @@ export function LocationExplorer({
           setAgency(v);
           setBuilding("");
           setFloor("");
-          setDivision("");
-          setRoom("");
+          setLocation("");
           setArea("");
         })}
         {select("อาคาร", buildings, b, (v) => {
           setBuilding(v);
           setFloor("");
-          setRoom("");
+          setLocation("");
           setArea("");
         })}
         {select("ชั้น", floors, f, (v) => {
           setFloor(v);
-          setRoom("");
+          setLocation("");
           setArea("");
         })}
-        {select("กองงาน", divisions, d, (v) => {
-          setDivision(v);
-          setRoom("");
-          setArea("");
-        })}
-        {select("ห้อง", rooms, r, (v) => {
-          setRoom(v);
+        {select("กองงาน / ห้อง", locations, selectedLocation?.id || "", (v) => {
+          setLocation(v);
           setArea("");
         })}
         <label>
