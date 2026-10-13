@@ -42,7 +42,7 @@ pnpm start
 
 โครงสร้างแยก `agencies`, `buildings`, `floors`, `divisions`, `rooms`, `division_room_links`, `organizational_departments`, `areas`, `personnel`, `asset_categories`, `assets`, `fixtures`, `layouts`, ประวัติการโอน/ผู้รับผิดชอบ, บัญชี, session, audit และสถานะซิงก์ ผังมี view `master_layouts`/`detail_layouts`; วัตถุในผังเก็บ JSONB พร้อม validation ฝั่ง API และ optimistic revision
 
-เลขทะเบียน STRING รูปแบบ `7xxx.xxxx.xxx.xxx.xx` มี UNIQUE และ regex CHECK ใน PostgreSQL; trigger ป้องกันเปลี่ยนเลขหลังสร้าง การจำหน่ายยังเก็บทะเบียนไว้ ไม่ให้ใช้เลขซ้ำ
+เลขทะเบียน STRING รองรับ `7xxx.xxxx.xxx.xxx.xx` และรูปแบบเอกสารเดิมตาม SPEC ข้อ 17 มี UNIQUE และ regex CHECK ใน PostgreSQL; trigger ป้องกันเปลี่ยนเลขหลังสร้าง การจำหน่ายยังเก็บทะเบียนไว้ ไม่ให้ใช้เลขซ้ำ
 
 ### ใช้ PostgreSQL Server แทน PGlite
 
@@ -113,7 +113,23 @@ CSV import ที่ทะเบียนใช้หัวคอลัมน์
 
 CSV สำหรับรายงานใช้หัวภาษาไทยและไม่ใช่ไฟล์นำเข้ากลับโดยตรง มีการป้องกัน formula injection เมื่อเปิดด้วย spreadsheet ส่วน JSON ในหน้าตั้งค่าเป็น export ข้อมูล ไม่ใช่ backup ทั้งระบบ
 
-XLSX import และ PNG/PDF export ยังไม่ทำ ตามงานระยะถัดไปที่ระบุใน SPEC
+นำเข้า XLSX แม่แบบ “ทะเบียนครุภัณฑ์” ได้ผ่านสคริปต์ด้านล่าง ส่วนอัปโหลด XLSX ทั่วไปผ่านหน้าเว็บและ PNG/PDF export ยังไม่ทำ
+
+### นำเข้าทะเบียนตาม Excel ต้นฉบับ
+
+ต้องมี Python 3 พร้อม `openpyxl` และเปิด API อยู่แล้ว ใช้บัญชี admin จาก `.env`:
+
+```powershell
+python -m pip install openpyxl
+python scripts/extract-source.py "C:\path\ทะเบียน.xlsx" imports/source.json
+pnpm exec tsx scripts/import-source.ts imports/source.json <division-id-ข้อมูลจริง>
+```
+
+สคริปต์อ่าน 10 คอลัมน์ตามแม่แบบเดิม เก็บรหัสตรงต้นฉบับและทุกแถวใน `asset_import_rows` นำเข้าเฉพาะรหัสที่ถูกต้องและไม่ซ้ำเข้าทะเบียน ส่วนรหัสซ้ำ/ผิดรูปแบบ/มีอยู่แล้วเข้าคิวตรวจสอบ โดยไม่เขียนทับข้อมูลเดิม การรันไฟล์เดิมซ้ำไม่สร้างรายการซ้ำ ทั้งชุดทำใน transaction
+
+หน้า **ทะเบียนครุภัณฑ์ → ข้อมูลครุภัณฑ์จากไฟล์ต้นฉบับ** แสดงครบทุกแถว กรองรายการรอตรวจสอบและส่งออก CSV ได้ ผู้ดูแลยืนยันรหัสจากหลักฐานพร้อมเหตุผลเพื่อเพิ่มแถวที่ค้างเข้าทะเบียนได้ โดยต้นฉบับไม่เปลี่ยนและมี audit
+
+สถานะครุภัณฑ์นำเข้าเป็น “รอตรวจสอบ” ข้อมูลห้อง/สถานที่จากไฟล์อยู่ในหมายเหตุและตารางต้นฉบับ ยังไม่ผูกตำแหน่งผังหรือบุคลากร ข้อมูลนำเข้าจริงอยู่ในฐานข้อมูล/โฟลเดอร์ `imports/` ที่ไม่ส่งขึ้น GitHub สำรองฐานข้อมูลก่อนนำเข้า และเมื่อเปิด Google sync จะมีแท็บ `asset_import_batches` กับ `asset_import_rows` เพิ่มจาก 16 ตารางเดิม
 
 ## สำรองและกู้คืน
 

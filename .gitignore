@@ -6,3 +6,4 @@ data/
 credentials*.json
 backups/
 coverage/
+imports/

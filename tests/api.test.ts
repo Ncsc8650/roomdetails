@@ -56,6 +56,12 @@ it("rejects cross-origin writes and demo private-data access", async () => {
     true,
   );
   expect(data.asset_movements).toEqual([]);
+  expect(data.asset_import_rows).toEqual([]);
+  expect(data.asset_import_batches).toEqual([]);
+  expect(
+    (await app.inject({ url: "/api/import/source", headers: demoHeaders }))
+      .statusCode,
+  ).toBe(403);
 });
 it("requires login and prevents demo writes", async () => {
   expect((await app.inject("/api/data")).statusCode).toBe(401);

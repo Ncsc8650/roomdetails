@@ -280,6 +280,8 @@ export const exportTables = [
   "asset_movements",
   "asset_assignment_history",
   "view_presets",
+  "asset_import_batches",
+  "asset_import_rows",
 ];
 export async function snapshot(db: Db) {
   const result: Record<string, Row[]> = {};

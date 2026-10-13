@@ -80,41 +80,31 @@ export async function migrate(db: Db) {
   await db.exec(
     "CREATE TABLE IF NOT EXISTS schema_migrations(version text PRIMARY KEY, applied_at timestamptz NOT NULL DEFAULT now())",
   );
-  if (
-    !(
-      await db.query("SELECT version FROM schema_migrations WHERE version=$1", [
-        "001",
-      ])
-    ).length
-  ) {
-    const source = await readFile(
-      resolve("db/migrations/001_initial.sql"),
-      "utf8",
-    );
-    await db.transaction(async (tx) => {
-      await tx.exec(source);
-      await tx.query("INSERT INTO schema_migrations(version) VALUES($1)", [
-        "001",
-      ]);
-    });
-  }
-  if (
-    !(
-      await db.query("SELECT version FROM schema_migrations WHERE version=$1", [
-        "002",
-      ])
-    ).length
-  ) {
-    const source = await readFile(
-      resolve("db/migrations/002_published_snapshot.sql"),
-      "utf8",
-    );
-    await db.transaction(async (tx) => {
-      await tx.exec(source);
-      await tx.query("INSERT INTO schema_migrations(version) VALUES($1)", [
-        "002",
-      ]);
-    });
+  for (const name of [
+    "001_initial",
+    "002_published_snapshot",
+    "003_source_import",
+  ]) {
+    const version = name.slice(0, 3);
+    if (
+      !(
+        await db.query(
+          "SELECT version FROM schema_migrations WHERE version=$1",
+          [version],
+        )
+      ).length
+    ) {
+      const source = await readFile(
+        resolve(`db/migrations/${name}.sql`),
+        "utf8",
+      );
+      await db.transaction(async (tx) => {
+        await tx.exec(source);
+        await tx.query("INSERT INTO schema_migrations(version) VALUES($1)", [
+          version,
+        ]);
+      });
+    }
   }
 }
 export async function insert(db: Db, table: string, row: Row) {

@@ -18,6 +18,7 @@ import { snapshot } from "../../../db/seed";
 import { syncSheets } from "./sheets";
 import { importAssets } from "./import";
 import { purgeSample } from "./sample";
+import { importSourceRows, resolveSourceRow } from "./source-import";
 type User = { id: string; username: string; role: string; is_demo: boolean };
 declare module "fastify" {
   interface FastifyRequest {
@@ -151,6 +152,24 @@ export async function createApp(db: Db) {
     return { ok: true };
   });
   app.get("/api/me", async (req) => req.user);
+  app.get("/api/import/source", async (req) => {
+    if (req.user?.is_demo)
+      throw new AppError(403, "บัญชีตัวอย่างดูไฟล์นำเข้าจริงไม่ได้");
+    return db.query(
+      "SELECT r.*,b.source_name,b.created_at,a.asset_number AS registered_code FROM asset_import_rows r JOIN asset_import_batches b ON b.id=r.batch_id LEFT JOIN assets a ON a.id=r.asset_id ORDER BY b.created_at DESC,r.row_number",
+    );
+  });
+  app.post("/api/import/source", async (req) => {
+    if (req.user!.role !== "admin") throw new AppError(403, "เฉพาะผู้ดูแล");
+    return importSourceRows(db, req.user!.id, req.body);
+  });
+  app.post<{ Params: { id: string } }>(
+    "/api/import/source/:id/resolve",
+    async (req) => {
+      if (req.user!.role !== "admin") throw new AppError(403, "เฉพาะผู้ดูแล");
+      return resolveSourceRow(db, req.user!.id, req.params.id, req.body);
+    },
+  );
   app.get("/api/data", async (req) => {
     const data = await snapshot(db);
     if (req.user?.is_demo) {
@@ -185,6 +204,8 @@ export async function createApp(db: Db) {
       );
       data.asset_movements = [];
       data.asset_assignment_history = [];
+      data.asset_import_batches = [];
+      data.asset_import_rows = [];
     }
     return data;
   });

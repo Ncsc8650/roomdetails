@@ -27,6 +27,7 @@ import {
   csv,
 } from "./lib";
 import { EntityManager } from "./EntityManager";
+import { SourceImports } from "./SourceImports";
 import { mayNavigate } from "./lib";
 import { LayoutEditor } from "./LayoutEditor";
 import type { LayoutObject } from "../../../packages/shared/model";
@@ -247,6 +248,13 @@ export default function App() {
           )}
           {page === "dashboard" && (
             <Dashboard data={data} sample={sample} navigate={setPage} />
+          )}
+          {page === "assets" && !user.is_demo && (
+            <SourceImports
+              admin={user.role === "admin"}
+              reload={reload}
+              notify={notify}
+            />
           )}
           {["assets", "personnel", "asset_categories"].includes(page) && (
             <EntityManager
